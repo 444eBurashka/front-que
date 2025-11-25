@@ -201,3 +201,44 @@
   width: 940px;
 }
 
+.frame-3, .frame-4, .frame-2, .frame-3 {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.frame-3:hover, .frame-2:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.frame-3:active, .frame-2:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.frame-4:hover, .frame-3:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.frame-4:active, .frame-3:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+input {
+  font-family: "Raleway-Medium", Helvetica;
+  font-size: 24px;
+  border: none;
+  outline: none;
+  width: 100%;
+  background-color: transparent;
+}
+
+input::placeholder {
+  color: #8f8f8f;
+}
+
+.frame input, .div-wrapper input, .frame-2 input {
+  padding: 5px;
+}

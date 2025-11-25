@@ -1,7 +1,25 @@
-import React from "react";
+import React, { useState } from "react";
 import "./LoginPage.css";
+import { loginUser } from "../../api";
+import { useNavigate } from "react-router-dom";
 
 export const LoginPage = () => {
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = async () => {
+    try {
+      const data = await loginUser({ login, password });
+      localStorage.setItem("access_token", data.access_token);
+      setError("");
+      alert("Успешный вход!"); // позже можно редиректить на другую страницу
+    } catch (err) {
+      setError(err.detail?.[0]?.msg || "Ошибка при входе");
+    }
+  };
+
   return (
     <div className="login">
       <div className="login-section">
@@ -10,58 +28,37 @@ export const LoginPage = () => {
         <div className="login-and-password">
           <div className="div">
             <div className="frame">
-              <div className="text-wrapper-2">Введите логин</div>
+              <input
+                className="text-wrapper-2"
+                placeholder="Введите логин"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+              />
             </div>
 
             <div className="div-wrapper">
-              <div className="text-wrapper-2">Введите пароль</div>
+              <input
+                className="text-wrapper-2"
+                placeholder="Введите пароль"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
           </div>
         </div>
 
         <div className="buttons">
-          <div className="frame-2">
+          <div className="frame-2" onClick={handleLogin}>
             <div className="text-wrapper-3">Войти</div>
           </div>
 
-          <div className="frame-3">
+          <div className="frame-3" onClick={() => navigate("/register")}>
             <div className="text-wrapper-4">Создать аккаунт</div>
           </div>
         </div>
 
-        <p className="p">
-          <span className="span">
-            Нажимая кнопку «Войти», Вы подтверждаете, что ознакомлены с
-          </span>
-
-          <span className="text-wrapper-5">&nbsp;</span>
-
-          <a
-            href="https://k-telecom.org/wp-content/uploads/2023/11/soglasie-na-obrabotku-dannyh.pdf"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <span className="text-wrapper-6">
-              Условиями обработки персональных данных
-            </span>
-          </a>
-
-          <span className="text-wrapper-5">, </span>
-
-          <span className="span">а также с</span>
-
-          <span className="text-wrapper-5">&nbsp;</span>
-
-          <a
-            href="https://k-telecom.org/politika-konfidentsialnosti"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <span className="text-wrapper-6">Политикой конфиденциальности</span>
-          </a>
-        </p>
-
-        <div className="text-wrapper-7">Восстановить доступ</div>
+        {error && <p style={{ color: "red" }}>{error}</p>}
       </div>
 
       <div className="rectangle" />

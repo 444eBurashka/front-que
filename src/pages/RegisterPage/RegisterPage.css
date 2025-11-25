@@ -1,0 +1,203 @@
+.registration {
+  background-color: #ffffff;
+  display: flex;
+  width: 100%;
+  height: 950px;
+  gap: 183px;
+}
+
+.registration .log-section {
+  align-items: flex-start;
+  align-self: center;
+  background-color: #f2f6f8;
+  border-radius: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-left: 120px;
+  margin-top: -25px;
+  padding: 80px 60px;
+  position: relative;
+  width: 677px;
+}
+
+.registration .text-wrapper {
+  align-self: stretch;
+  color: #000000;
+  font-family: "Raleway-ExtraBold", Helvetica;
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: normal;
+  position: relative;
+}
+
+.registration .login-and-password {
+  align-items: flex-start;
+  align-self: stretch;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  width: 100%;
+}
+
+.registration .log {
+  align-items: flex-start;
+  align-self: stretch;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  position: relative;
+  width: 100%;
+}
+
+.registration .frame {
+  align-items: center;
+  align-self: stretch;
+  background-color: #ffffff;
+  border: 2px solid;
+  border-color: #8f8f8f;
+  border-radius: 10px 10px 0px 0px;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 10px;
+  position: relative;
+  width: 100%;
+}
+
+.registration .div {
+  color: #8f8f8f;
+  font-family: "Raleway-Medium", Helvetica;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: normal;
+  margin-top: -1.00px;
+  position: relative;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.registration .div-wrapper {
+  align-items: center;
+  align-self: stretch;
+  background-color: #ffffff;
+  border: 2px solid;
+  border-color: #8f8f8f;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 10px;
+  position: relative;
+  width: 100%;
+}
+
+.registration .frame-2 {
+  align-items: center;
+  align-self: stretch;
+  background-color: #ffffff;
+  border: 2px solid;
+  border-color: #8f8f8f;
+  border-radius: 0px 0px 10px 10px;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 10px;
+  position: relative;
+  width: 100%;
+}
+
+.registration .buttons {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 15px;
+  position: relative;
+}
+
+.registration .frame-3 {
+  align-items: center;
+  background-color: #c8235a;
+  border-radius: 10px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  justify-content: center;
+  padding: 10px;
+  position: relative;
+}
+
+.registration .text-wrapper-2 {
+  color: #ffffff;
+  font-family: "Raleway-Medium", Helvetica;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: normal;
+  margin-top: -1.00px;
+  position: relative;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.registration .frame-4 {
+  align-items: center;
+  border: 2px solid;
+  border-color: #c8235a;
+  border-radius: 10px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  justify-content: center;
+  padding: 10px;
+  position: relative;
+}
+
+.registration .text-wrapper-3 {
+  color: #c8235a;
+  font-family: "Raleway-Medium", Helvetica;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: normal;
+  position: relative;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.registration .p {
+  align-self: stretch;
+  color: #000000;
+  font-family: "Raleway-Medium", Helvetica;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: normal;
+  position: relative;
+}
+
+.registration .span {
+  color: #000000;
+  font-family: "Raleway-Medium", Helvetica;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.registration .text-wrapper-4 {
+  font-size: 24px;
+}
+
+.registration .text-wrapper-5 {
+  font-size: 24px;
+  text-decoration: underline;
+}
+
+.registration .rectangle {
+  background-color: #d9d9d9;
+  width: 940px;
+}
+

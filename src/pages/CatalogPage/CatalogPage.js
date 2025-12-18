@@ -17,7 +17,6 @@ const CatalogPage = () => {
   
   const fileInputRef = useRef(null);
 
-  // Константы и данные
   const QUEUES = useMemo(() => [
     { id: 1, owner: 'Артем Артемович', status: 'на встрече' },
     { id: 2, owner: 'Иван Иванович', status: 'свободен' },
@@ -29,7 +28,6 @@ const CatalogPage = () => {
     ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'], []
   );
 
-  // Моковые данные для поступающих заявок (раздел "Моя очередь")
   const initialRequests = useMemo(() => [
     { 
       id: 1, 
@@ -64,8 +62,6 @@ const CatalogPage = () => {
   ], []);
 
   const [queueRequests, setQueueRequests] = useState(initialRequests);
-
-  // ========== ОБРАБОТЧИКИ ДЛЯ ПРОСМОТРА ==========
 
   const handleQueueClick = useCallback((queue) => {
     if (queue.status !== 'не доступен') {
@@ -151,14 +147,11 @@ const CatalogPage = () => {
     fileInputRef.current?.click();
   }, []);
 
-  // ========== ОБРАБОТЧИКИ ДЛЯ МОЕЙ ОЧЕРЕДИ ==========
-
   const handleSaveRequest = useCallback((updatedRequest) => {
     setQueueRequests(prev => prev.map(req => 
       req.id === updatedRequest.id ? updatedRequest : req
     ));
-    
-    // Если статус "принята" или "отклонена", удаляем из списка
+
     if (updatedRequest.status === 'принята' || updatedRequest.status === 'отклонена') {
       setQueueRequests(prev => prev.filter(req => req.id !== updatedRequest.id));
     }
@@ -171,7 +164,6 @@ const CatalogPage = () => {
     setSelectedRequest(null);
   }, []);
 
-  // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
   const renderUrgencyIcons = () => {
     const icons = [];
@@ -223,7 +215,6 @@ const CatalogPage = () => {
     }
   };
 
-  // ========== КОМПОНЕНТЫ ДЛЯ ПРОСМОТРА ==========
 
   const AppointmentFormInline = useCallback(() => (
     <div className="appointment-form-inline">
@@ -401,7 +392,6 @@ const CatalogPage = () => {
     </div>
   ), [appointments, handleCancelAppointment, getUrgencyLabel]);
 
-  // ========== КОМПОНЕНТЫ ДЛЯ МОЕЙ ОЧЕРЕДИ ==========
 
   const IncomingRequestsList = useCallback(() => (
     <div className="incoming-requests">
@@ -615,7 +605,6 @@ const CatalogPage = () => {
     </div>
   ), [IncomingRequestsList, RequestEditForm]);
 
-  // ========== ГЛАВНЫЕ СЕКЦИИ ==========
 
   const sections = {
     queueslist: {

@@ -10,29 +10,47 @@ export const RegisterPage = () => {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const navigate = useNavigate();
 
   const handleRegister = async () => {
+    // Проверка совпадения паролей
     if (password !== passwordConfirm) {
       setError("Пароли не совпадают");
       return;
     }
 
     try {
+      // Формирование данных для отправки
       const data = {
         login,
         password,
         email,
         email_notifications: true,
-        telegram_login: "",
-        telegram_notifications: false,
+        telegram_login: login,
+        telegram_notifications: true,
       };
+      console.log(data);
+
+      // Вызов API для регистрации
       await registerUser(data);
+
+      // Установка сообщения об успехе
       setSuccess("Аккаунт успешно создан!");
+      // Сброс ошибки
       setError("");
+
+      // Автоматический редирект на страницу входа через 1.5 секунды
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+
     } catch (err) {
-      setError(err.detail?.[0]?.msg || "Ошибка при регистрации");
+      // Обработка ошибок от API
+      setError(
+        err.detail?.[0]?.msg ||
+        err.message ||
+        "Ошибка при регистрации"
+      );
     }
   };
 
@@ -43,10 +61,10 @@ export const RegisterPage = () => {
 
         <div className="login-and-password">
           <div className="log">
-            <div className="frame">
+            <div className="frame1">
               <input
                 className="div"
-                placeholder="Введите имя"
+                placeholder="Введите логин"
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
               />
@@ -94,6 +112,8 @@ export const RegisterPage = () => {
           </div>
         </div>
 
+
+        {/* Вывод сообщений об ошибках и успехе */}
         {error && <p style={{ color: "red" }}>{error}</p>}
         {success && <p style={{ color: "green" }}>{success}</p>}
       </div>

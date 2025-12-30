@@ -1,8 +1,9 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import './CatalogPage.css';
 import urgencyInactiveIcon from '../../../src/components/Image/urgency-inactive.svg';
 import urgencyActiveIcon from '../../../src/components/Image/urgency-active.svg';
+import { getQueues } from "../../api";
 
 const CatalogPage = () => {
   const [activeSection, setActiveSection] = useState('queueslist');
@@ -14,15 +15,43 @@ const CatalogPage = () => {
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [queues, setQueues] = useState([]);
+  const [loadingQueues, setLoadingQueues] = useState(true);
+  const [error, setError] = useState(null);
   
   const fileInputRef = useRef(null);
 
-  const QUEUES = useMemo(() => [
-    { id: 1, owner: 'Артем Артемович', status: 'на встрече' },
-    { id: 2, owner: 'Иван Иванович', status: 'свободен' },
-    { id: 3, owner: 'Мария Петровна', status: 'свободен' },
-    { id: 4, owner: 'Алексей Сергеевич', status: 'не доступен' }
-  ], []);
+  useEffect(() => {
+    const fetchQueues = async () => {
+      try {
+        setLoadingQueues(true);
+        const queuesData = await getQueues();
+        setQueues(queuesData);
+        setError(null);
+      } catch (err) {
+        console.error('Ошибка загрузки очередей:', err);
+        setError('Не удалось загрузить очереди. Пожалуйста, попробуйте позже.');
+      } finally {
+        setLoadingQueues(false);
+      }
+    };
+
+    fetchQueues();
+  }, []);
+
+  const formattedQueues = useMemo(() => {
+    if (!queues || queues.length === 0) return [];
+    
+    return queues.map(queue => ({
+      id: queue.queue_id,
+      owner: queue.name,
+      owner_id: queue.owner_id,
+      status: 'свободен',
+      cleanup_interval: queue.cleanup_interval,
+      record_interval: queue.record_interval,
+      rawData: queue
+    }));
+  }, [queues]);
 
   const TIME_SLOTS = useMemo(() => 
     ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'], []
@@ -107,26 +136,37 @@ const CatalogPage = () => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  const handleCreateAppointment = useCallback(() => {
-    if (!selectedQueue || !selectedTime || !visitPurpose.trim()) return;
+  const handleCreateAppointment = useCallback(async () => {
+    if (!selectedQueue || !selectedTime || !visitPurpose.trim()) {
+      alert('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
     
-    const newAppointment = {
-      id: Date.now(),
-      queueId: selectedQueue.id,
-      queueOwner: selectedQueue.owner,
-      time: selectedTime,
-      date: new Date().toLocaleDateString('ru-RU'),
-      purpose: visitPurpose,
-      urgency: urgencyLevel,
-      files: files.map(file => file.name)
-    };
-    
-    setAppointments(prev => [...prev, newAppointment]);
-    setSelectedQueue(null);
-    setVisitPurpose('');
-    setSelectedTime('');
-    setUrgencyLevel('');
-    setFiles([]);
+    try {
+      // Здесь можно добавить вызов API для создания записи
+      const newAppointment = {
+        id: Date.now(),
+        queueId: selectedQueue.id,
+        queueOwner: selectedQueue.owner,
+        time: selectedTime,
+        date: new Date().toLocaleDateString('ru-RU'),
+        purpose: visitPurpose,
+        urgency: urgencyLevel,
+        files: files.map(file => file.name)
+      };
+      
+      setAppointments(prev => [...prev, newAppointment]);
+      
+      setSelectedQueue(null);
+      setVisitPurpose('');
+      setSelectedTime('');
+      setUrgencyLevel('');
+      setFiles([]);
+      
+    } catch (err) {
+      console.error('Ошибка при создании записи:', err);
+      alert('Не удалось создать запись. Попробуйте еще раз.');
+    }
   }, [selectedQueue, selectedTime, visitPurpose, urgencyLevel, files]);
 
   const handleCancelAppointment = useCallback((id) => {
@@ -163,7 +203,6 @@ const CatalogPage = () => {
     setQueueRequests(prev => prev.filter(req => req.id !== requestId));
     setSelectedRequest(null);
   }, []);
-
 
   const renderUrgencyIcons = () => {
     const icons = [];
@@ -214,7 +253,6 @@ const CatalogPage = () => {
       default: return 'Не указан';
     }
   };
-
 
   const AppointmentFormInline = useCallback(() => (
     <div className="appointment-form-inline">
@@ -391,7 +429,6 @@ const CatalogPage = () => {
       )}
     </div>
   ), [appointments, handleCancelAppointment, getUrgencyLabel]);
-
 
   const IncomingRequestsList = useCallback(() => (
     <div className="incoming-requests">
@@ -605,6 +642,60 @@ const CatalogPage = () => {
     </div>
   ), [IncomingRequestsList, RequestEditForm]);
 
+  const QueuesListContent = useCallback(() => {
+    if (loadingQueues) {
+      return (
+        <div className="queues-loading">
+          <div className="loading-spinner"></div>
+          <p>Загрузка очередей...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="queues-error">
+          <p className="error-text">{error}</p>
+          <button 
+            type="button"
+            className="retry-btn"
+            onClick={() => window.location.reload()}
+          >
+            Попробовать снова
+          </button>
+        </div>
+      );
+    }
+
+    if (formattedQueues.length === 0) {
+      return (
+        <div className="no-queues">
+          <p>Нет доступных очередей</p>
+          <p className="queues-hint">Создайте очередь или дождитесь, пока другие пользователи создадут свои очереди</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="queues-list">
+        {formattedQueues.map((queue) => (
+          <button
+            key={queue.id}
+            type="button"
+            className={`queue-item ${queue.status === 'свободен' ? 'available' : ''}`}
+            onClick={() => handleQueueClick(queue)}
+            disabled={queue.status === 'не доступен'}
+            aria-label={`Записаться к ${queue.owner}, статус: ${queue.status}`}
+          >
+            <div className="item-owner">{queue.owner}</div>
+            <div className={`item-status ${queue.status === 'свободен' ? 'free' : 'busy'}`}>
+              {queue.status}
+            </div>
+          </button>
+        ))}
+      </div>
+    );
+  }, [loadingQueues, error, formattedQueues, handleQueueClick]);
 
   const sections = {
     queueslist: {
@@ -614,23 +705,7 @@ const CatalogPage = () => {
           <div className="frame">
             <div className="queues">
               <h2 className="text">Открытые очереди</h2>
-              <div className="queues-list">
-                {QUEUES.map((queue) => (
-                  <button
-                    key={queue.id}
-                    type="button"
-                    className={`queue-item ${queue.status === 'свободен' ? 'available' : ''}`}
-                    onClick={() => handleQueueClick(queue)}
-                    disabled={queue.status === 'не доступен'}
-                    aria-label={`Записаться к ${queue.owner}, статус: ${queue.status}`}
-                  >
-                    <div className="item-owner">{queue.owner}</div>
-                    <div className={`item-status ${queue.status === 'свободен' ? 'free' : 'busy'}`}>
-                      {queue.status}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <QueuesListContent />
             </div>
             
             {selectedQueue ? <AppointmentFormInline /> : <MyAppointmentsBlock />}

@@ -11,12 +11,15 @@ export const LoginPage = () => {
 
   const handleLogin = async () => {
     try {
-      const data = await loginUser({ login, password });
-      localStorage.setItem("access_token", data.access_token);
+      await loginUser({ login, password });
       setError("");
-      alert("Успешный вход!"); // позже можно редиректить на другую страницу
+      navigate("/catalog"); // Редирект на главную после входа
     } catch (err) {
-      setError(err.detail?.[0]?.msg || "Ошибка при входе");
+      setError(
+        err.detail?.[0]?.msg ||
+        err.message ||
+        "Ошибка при входе"
+      );
     }
   };
 

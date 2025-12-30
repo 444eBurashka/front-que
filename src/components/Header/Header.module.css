@@ -12,7 +12,6 @@
   height: clamp(30px, 6vw, 50px);
   font-weight: bold;
   color: #333;
-  
 }
 
 .nav {
@@ -45,4 +44,29 @@
 
 .navLink:hover::after {
   width: 100%;
+}
+
+.authSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.username {
+  font-weight: 500;
+  color: #333;
+}
+
+.logoutBtn {
+  background: none;
+  border: none;
+  color: #EA6133;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.3s ease;
+}
+
+.logoutBtn:hover {
+  color: #C8235A;
 }

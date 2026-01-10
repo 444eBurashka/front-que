@@ -3,6 +3,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import './CatalogPage.css';
 import urgencyInactiveIcon from '../../../src/components/Image/urgency-inactive.svg';
 import urgencyActiveIcon from '../../../src/components/Image/urgency-active.svg';
+import filterIcon from '../../../src/components/Image/filter.svg'
 import { getQueues } from "../../api";
 
 const CatalogPage = () => {
@@ -18,6 +19,13 @@ const CatalogPage = () => {
   const [queues, setQueues] = useState([]);
   const [loadingQueues, setLoadingQueues] = useState(true);
   const [error, setError] = useState(null);
+  const [isCreateQueueModalOpen, setIsCreateQueueModalOpen] = useState(false);
+  const [newQueueName, setNewQueueName] = useState('');
+  const [queueDescription, setQueueDescription] = useState('');
+  const [recordInterval, setRecordInterval] = useState(30);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  
   
   const fileInputRef = useRef(null);
 
@@ -203,6 +211,48 @@ const CatalogPage = () => {
     setQueueRequests(prev => prev.filter(req => req.id !== requestId));
     setSelectedRequest(null);
   }, []);
+
+  const handleCreateQueueClick = useCallback(() => {
+    setIsCreateQueueModalOpen(true);
+    document.body.style.overflow = 'hidden';
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsCreateQueueModalOpen(false);
+    setNewQueueName('');
+    setQueueDescription('');
+    setRecordInterval(30);
+    setIsSubmitting(false);
+    document.body.style.overflow = 'unset';
+  }, []);
+
+  const handleCreateQueueSubmit = useCallback(async () => {
+    if (!newQueueName.trim()) {
+      alert('Введите название очереди');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      console.log('Создаем очередь:', {
+        name: newQueueName,
+        description: queueDescription,
+        record_interval: recordInterval
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert('Очередь успешно создана!');
+      handleCloseModal();
+            
+    } catch (error) {
+      console.error('Ошибка при создании очереди:', error);
+      alert('Не удалось создать очередь. Попробуйте еще раз.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [newQueueName, queueDescription, recordInterval, handleCloseModal]);
 
   const renderUrgencyIcons = () => {
     const icons = [];
@@ -432,7 +482,60 @@ const CatalogPage = () => {
 
   const IncomingRequestsList = useCallback(() => (
     <div className="incoming-requests">
-      <h2 className="text">Поступающие заявки</h2>
+      <h2 className="text">Заявки</h2>
+      <input
+          type="text"
+          className="search-input"
+          //value={query}
+          //onChange={handleChange}
+          placeholder={"Поиск"}
+        />
+        <button 
+          type="button"
+          className="filter-btn"
+          onClick={() => setSelectedRequest(null)}
+          aria-label="Фильтр"
+        >
+          <img 
+            src={filterIcon}
+            alt="Фильтр"
+            className="filter-icon"
+          />
+        </button>
+        <div className='incoming-buttons'>
+          <button 
+          type="button"
+          className="queue-btn"
+          onClick={() => setSelectedRequest(null)}>
+          Новые
+          </button>
+
+          <button 
+          type="button"
+          className="queue-btn"
+          onClick={() => setSelectedRequest(null)}>
+          Согласованные
+          </button>
+
+          <button 
+          type="button"
+          className="queue-btn"
+          onClick={() => setSelectedRequest(null)}>
+          Отклоненные
+          </button>
+
+          <button 
+          type="button"
+          className="queue-btn"
+          onClick={() => setSelectedRequest(null)}>
+          Лист ожидания
+          </button>
+        </div>
+
+        <div className="queue-dropdown">
+          выбор проекта
+        </div>
+
       
       {queueRequests.length === 0 ? (
         <div className="no-requests">
@@ -448,11 +551,42 @@ const CatalogPage = () => {
               className={`request-item ${selectedRequest?.id === request.id ? 'selected' : ''}`}
               onClick={() => setSelectedRequest(request)}
             >
-              <div className='request-priority'>{request.priority}</div>
+              <div className="priority-container">
+                {request.priority === 'high' ? (
+                  <div className="high-priority-group">
+                    <div className="images-row">
+                      <img src={urgencyActiveIcon} alt="ср" />
+                      <img src={urgencyActiveIcon} alt="ср" />
+                      <img src={urgencyActiveIcon} alt="ср" />
+                    </div>
+                  </div>
+                ) : request.priority === 'medium' ? (
+                  <div className="medium-priority-group">
+                    <div className="images-row">
+                      <img src={urgencyActiveIcon} alt="ср" />
+                      <img src={urgencyActiveIcon} alt="ср" />
+                      <img src={urgencyInactiveIcon} alt="ср" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="low-priority-group">
+                    <div className="images-row">
+                      <img src={urgencyActiveIcon} alt="ср" />
+                      <img src={urgencyInactiveIcon} alt="ср" />
+                      <img src={urgencyInactiveIcon} alt="ср" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="request-item-time">{request.time}</div>
               <div className="request-purpose">{request.purpose}</div>
-              <div className="request-time">{request.time}</div>
               {request.files && request.files.length > 0 && (
-                <div className="request-files">📎 {request.files} файл</div>
+                <div className="request-files">
+                  {request.files.length === 1 
+                    ? request.files[0]
+                    : `${request.files[0]} + ${request.files.length - 1}`
+                  }
+                </div>
               )}
               <div className="request-user">{request.userName}</div>
             </button>
@@ -498,7 +632,7 @@ const CatalogPage = () => {
     return (
       <div className="request-edit-form">
         <div className="form-header">
-          <h3 className="form-title">Редактирование заявки</h3>
+          <h3 className="form-title">Заявка</h3>
           <button 
             type="button"
             className="close-form-btn"
@@ -510,124 +644,76 @@ const CatalogPage = () => {
         </div>
         
         <div className="request-details">
-          <div className="detail-value user-name">{selectedRequest.userName}</div>
-          <div className="detail-value">{selectedRequest.purpose}</div>
-          <div className="detail-value time-value">{selectedRequest.time}</div>
-          <div className="detail-value priority-value">
-            <span className={`priority-badge ${selectedRequest.priority}`}>
-              {getPriorityLabel(selectedRequest.priority)}
-            </span>
+          <div className="detail-value detail-purpose">{selectedRequest.purpose}</div>
+          <div className='double-row'>
+            <div className="priority-container">
+                  {selectedRequest.priority === 'high' ? (
+                    <div className="high-priority-group">
+                      <div className="images-row">
+                        <img src={urgencyActiveIcon} alt="ср" />
+                        <img src={urgencyActiveIcon} alt="ср" />
+                        <img src={urgencyActiveIcon} alt="ср" />
+                      </div>
+                    </div>
+                  ) : selectedRequest.priority === 'medium' ? (
+                    <div className="medium-priority-group">
+                      <div className="images-row">
+                        <img src={urgencyActiveIcon} alt="ср" />
+                        <img src={urgencyActiveIcon} alt="ср" />
+                        <img src={urgencyInactiveIcon} alt="ср" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="low-priority-group">
+                      <div className="images-row">
+                        <img src={urgencyActiveIcon} alt="ср" />
+                        <img src={urgencyInactiveIcon} alt="ср" />
+                        <img src={urgencyInactiveIcon} alt="ср" />
+                      </div>
+                    </div>
+                  )}
+            </div>
+            <div className="detail-value time-value">{selectedRequest.time}</div>
           </div>
-          
           {selectedRequest.files && selectedRequest.files.length > 0 && (
-            <div className="detail-group">
-              <label className="detail-label">Приложенные файлы:</label>
-              <div className="file-list">
-                {selectedRequest.files.map((file, index) => (
-                  <div key={index} className="file-item">
-                    <span className="file-icon">📄</span>
-                    <span className="file-name">{file}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="detail-value file-list">
+              {selectedRequest.files.map((file, index) => (
+                <div key={index} className="file-item">
+                  <span className="file-name">{file}</span>
+                </div>
+              ))}
             </div>
           )}
+          <div className="detail-value user-name">{selectedRequest.userName}</div>
         </div>
         
-        <div className="edit-form">
-          <div className="form-group">
-            <label className="form-label">Новое время встречи:</label>
-            <select 
-              className="time-select"
-              value={newTime}
-              onChange={(e) => setNewTime(e.target.value)}
-            >
-              <option value="">Выберите время</option>
-              {TIME_SLOTS.map(time => (
-                <option key={time} value={time}>{time}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">Новый приоритет:</label>
-            <div className="priority-selector">
-              <button
-                type="button"
-                className={`priority-option ${newPriority === 'low' ? 'selected' : ''}`}
-                onClick={() => setNewPriority('low')}
-              >
-                Низкий
-              </button>
-              <button
-                type="button"
-                className={`priority-option ${newPriority === 'medium' ? 'selected' : ''}`}
-                onClick={() => setNewPriority('medium')}
-              >
-                Средний
-              </button>
-              <button
-                type="button"
-                className={`priority-option ${newPriority === 'high' ? 'selected' : ''}`}
-                onClick={() => setNewPriority('high')}
-              >
-                Высокий
-              </button>
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">Статус заявки:</label>
-            <div className="status-selector">
-              <button
-                type="button"
-                className={`status-option ${status === 'ожидает' ? 'selected' : ''}`}
-                onClick={() => setStatus('ожидает')}
-              >
-                Ожидает
-              </button>
-              <button
-                type="button"
-                className={`status-option ${status === 'принята' ? 'selected' : ''}`}
-                onClick={() => setStatus('принята')}
-              >
-                Принять
-              </button>
-              <button
-                type="button"
-                className={`status-option ${status === 'отклонена' ? 'selected' : ''}`}
-                onClick={() => setStatus('отклонена')}
-              >
-                Отклонить
-              </button>
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">Комментарий:</label>
-            <textarea 
-              className="comment-input"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Добавьте комментарий к заявке..."
-              rows="3"
-            />
-          </div>
-          
+        <div className="edit-form"> 
           <div className="form-actions">
             <button 
               type="button"
               className="save-btn"
               onClick={handleSave}
             >
-              Сохранить изменения
+              Согласовать
             </button>
             <button 
               type="button"
               className="delete-btn"
               onClick={handleDelete}
             >
-              Удалить заявку
+              Отклонить
+            </button>
+            <button 
+              type="button"
+              className="change-btn"
+            >
+              Перенос времени
+            </button>
+            <button 
+              type="button"
+              className="change-btn"
+            >
+              Изменить приоритет
             </button>
           </div>
         </div>
@@ -719,8 +805,15 @@ const CatalogPage = () => {
         <div className="my-queue-section">
           <MyQueueManager />
         </div>
-      )
+      ),
+      subMenu: true
     }
+  };
+
+  const [activeSubMenu, setActiveSubMenu] = useState('requests')
+
+  const subMenuItems = {
+    requests: 'Создать новую очередь',
   };
 
   return (
@@ -740,10 +833,99 @@ const CatalogPage = () => {
           </button>
         ))}
       </div>
+      
+
+      {activeSection === 'myqueueslist' && (
+        <div className="new-queue-button">
+          {Object.entries(subMenuItems).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`queue-button ${activeSubMenu === key ? 'active' : ''}`}
+              onClick={handleCreateQueueClick}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
 
       <div className="content-section" role="tabpanel" id={`${activeSection}-panel`}>
         {sections[activeSection].content}
       </div>
+      {isCreateQueueModalOpen && (
+        <div className="modal-overlay" onClick={handleCloseModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Создание очереди</h2>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">
+                  Название очереди *
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={newQueueName}
+                  onChange={(e) => setNewQueueName(e.target.value)}
+                  placeholder="Название (3-100 символов)"
+                  maxLength={100}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">
+                  Интервал записи
+                </label>
+                <p className="form-hint">
+                  Определяет длительность одного временного слота для записи
+                </p>
+                <select
+                  className="form-select"
+                  value={recordInterval}
+                  onChange={(e) => setRecordInterval(Number(e.target.value))}
+                >
+                  <option value={15}>15 минут</option>
+                  <option value={30}>30 минут</option>
+                  <option value={45}>45 минут</option>
+                  <option value={60}>60 минут</option>
+                  <option value={90}>1 час 30 минут</option>
+                  <option value={120}>2 часа</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="modal-submit-btn"
+                onClick={handleCreateQueueSubmit}
+                disabled={isSubmitting || !newQueueName.trim()}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner"></span>
+                    Создание...
+                  </>
+                ) : (
+                  'Создать очередь'
+                )}
+              </button>
+              <button
+                type="button"
+                className="modal-cancel-btn"
+                onClick={handleCloseModal}
+                disabled={isSubmitting}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

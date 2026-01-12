@@ -1,0 +1,94 @@
+.profile {
+  width: 1067px;
+  height: 497px;
+  background-color: #f2f6f8;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 10px;
+  gap: 20px;
+}
+
+.label {
+  font-weight: bold;
+  color: #000000;
+  font-size: 24px;
+}
+
+.pr-input {
+  height: 43px;
+  width: calc(100% - 20px);
+  background-color: #ffffff;
+  border-radius: 5px;
+  padding: 0 10px;
+  font-size: 20px;
+}
+
+.main-label {
+  font-size: 32px;
+  margin-bottom: -5px;
+}
+
+.profile-photo {
+  width: 146px;
+  height: 146px;
+}
+
+.profile-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.profile-name-div {
+  width: calc(50% - 5px);
+}
+
+.profile-name {
+  font-size: 24px;
+}
+
+.profile-surname-div {
+  width: calc(50% - 5px);
+}
+
+.profile-notifs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.profile-email-div ,
+.profile-tg-div {
+  width: calc(50% - 5px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.profile-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+}
+
+.profile-save-btn,
+.profile-exit-btn {
+  height: 43px;
+  width: 259px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.profile-save-btn {
+  background-color: #7CDA7C;
+  color: white;
+}
+
+.profile-exit-btn {
+  background-color: white;
+  color: black;
+}

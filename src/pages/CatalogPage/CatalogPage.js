@@ -4,7 +4,183 @@ import './CatalogPage.css';
 import urgencyInactiveIcon from '../../../src/components/Image/urgency-inactive.svg';
 import urgencyActiveIcon from '../../../src/components/Image/urgency-active.svg';
 import filterIcon from '../../../src/components/Image/filter.svg'
-import { getQueues } from "../../api";
+import { getQueues, createRecord, getMyRecords, deleteRecord, getMyQueues, getRecordsByQueue, createQueue } from "../../api";
+
+
+function generateTimeSlots(start = '08:00', end = '16:00', intervalISO = 'PT30M') {
+  const slots = [];
+  const [startHours, startMinutes] = start.split(':').map(Number);
+  const [endHours, endMinutes] = end.split(':').map(Number);
+
+  const match = intervalISO.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  const hours = match[1] ? parseInt(match[1], 10) : 0;
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const intervalMinutes = hours * 60 + minutes;
+
+  if (intervalMinutes === 0) return [];
+  let current = new Date();
+  current.setHours(startHours, startMinutes, 0, 0);
+
+  const endTime = new Date();
+  endTime.setHours(endHours, endMinutes, 0, 0);
+
+  while (current <= endTime) {
+    const h = String(current.getHours()).padStart(2, '0');
+    const m = String(current.getMinutes()).padStart(2, '0');
+    slots.push(`${h}:${m}`);
+
+    current.setMinutes(current.getMinutes() + intervalMinutes);
+  }
+
+  return slots;
+}
+
+
+
+function AppointmentFormInline({
+  selectedQueue,
+  visitPurpose,
+  setVisitPurpose,
+  selectedTime,
+  TIME_SLOTS,
+  handleTimeSelect,
+  urgencyLevel,
+  renderUrgencyIcons,
+  isDragging,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  triggerFileInput,
+  fileInputRef,
+  handleFileChange,
+  files,
+  removeFile,
+  handleCreateAppointment,
+  setSelectedQueue
+}) {
+  return (
+    <div className="appointment-form-inline">
+      <div className="appointment-form-header">
+        <h2 className="text">Запись на встречу</h2>
+        <button 
+          type="button"
+          className="close-form-btn"
+          onClick={() => setSelectedQueue(null)}
+          aria-label="Закрыть форму"
+        >
+          ×
+        </button>
+      </div>
+      <div className="appointment-body">
+        <div className="queue-owner">{selectedQueue.owner}</div>
+        
+        <div className="form-group">
+          <label className="appointment-text">Укажите цель визита</label>
+          <input 
+            type="text" 
+            className="queue-input" 
+            value={visitPurpose}
+            onChange={(e) => setVisitPurpose(e.target.value)}
+            placeholder="Например: Консультация по проекту"
+            maxLength={100}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label className="appointment-text">Укажите время встречи</label>
+          <div className="time-slots">
+            {TIME_SLOTS.map((time) => (
+              <button
+                key={time}
+                type="button"
+                className={`time-slot-btn ${selectedTime === time ? 'selected' : ''}`}
+                onClick={() => handleTimeSelect(time)}
+              >
+                {time}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        
+        <div className="form-group">
+          <label className="appointment-text">Укажите срочность встречи</label>
+          <div className="urgency-selector">
+            {renderUrgencyIcons()}
+            <div className="urgency-labels">
+              <span className={`urgency-label ${urgencyLevel === 'low' ? 'active' : ''}`}></span>
+              <span className={`urgency-label ${urgencyLevel === 'medium' ? 'active' : ''}`}></span>
+              <span className={`urgency-label ${urgencyLevel === 'high' ? 'active' : ''}`}></span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label className="appointment-text">Файлы</label>
+          <div 
+            className={`file-drop-area ${isDragging ? 'dragging' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={triggerFileInput}
+          >
+            <div className="file-drop-content">
+              <div className="file-drop-text">
+                <span className="file-drop-main">Перетащите файлы сюда</span>
+                <span className="file-drop-sub">или кликните для выбора файла</span>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="file-input-hidden"
+            />
+          </div>
+          
+          {files.length > 0 && (
+            <div className="file-list">
+              {files.map((file, index) => (
+                <div key={index} className="file-item">
+                  <span className="file-name">{file.name}</span>
+                  <span className="file-size">
+                    {file.size > 1024 * 1024 
+                      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                      : `${(file.size / 1024).toFixed(1)} KB`
+                    }
+                  </span>
+                  <button 
+                    type="button"
+                    className="file-remove-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(index);
+                    }}
+                    aria-label="Удалить файл"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <button 
+          type="button"
+          className="submit-appointment-btn"
+          onClick={handleCreateAppointment}
+          disabled={!selectedTime || !visitPurpose.trim()}
+        >
+          Записаться
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 
 const CatalogPage = () => {
   const [activeSection, setActiveSection] = useState('queueslist');
@@ -24,6 +200,10 @@ const CatalogPage = () => {
   const [queueDescription, setQueueDescription] = useState('');
   const [recordInterval, setRecordInterval] = useState(30);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [myQueues, setMyQueues] = useState([]);
+  const [selectedFilterQueue, setSelectedFilterQueue] = useState(null);
+  const [filteredQueueRecords, setFilteredQueueRecords] = useState([]);
+
 
   
   
@@ -47,6 +227,64 @@ const CatalogPage = () => {
     fetchQueues();
   }, []);
 
+  useEffect(() => {
+    const fetchMyQueues = async () => {
+      try {
+        const queuesData = await getMyQueues();
+        setMyQueues(queuesData);
+      } catch (err) {
+        console.error('Ошибка загрузки моих очередей:', err);
+      }
+    };
+
+    fetchMyQueues();
+  }, []);
+
+  const handleFilterQueueChange = async (queueId) => {
+    setSelectedFilterQueue(queueId);
+    try {
+      const records = await getRecordsByQueue(queueId);
+      setFilteredQueueRecords(records);
+    } catch (err) {
+      console.error('Ошибка загрузки записей очереди:', err);
+      setFilteredQueueRecords([]);
+    }
+  };
+
+  const fetchMyAppointments = useCallback(async () => {
+    try {
+      const records = await getMyRecords();
+
+      const mappedAppointments = records.map(record => {
+        const date = new Date(record.meeting_datetime);
+
+        return {
+          id: record.record_id,
+          queueOwner: record.queue_id,
+          purpose: record.purpose,
+          time: date.toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          date: date.toLocaleDateString('ru-RU'),
+          urgency: record.urgency_level,
+          status: record.status,
+          managerComment: record.manager_comment,
+          files: []
+        };
+      });
+
+      setAppointments(mappedAppointments);
+    } catch (err) {
+      console.error('Ошибка загрузки моих записей:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMyAppointments();
+  }, [fetchMyAppointments]);
+
+
   const formattedQueues = useMemo(() => {
     if (!queues || queues.length === 0) return [];
     
@@ -61,9 +299,11 @@ const CatalogPage = () => {
     }));
   }, [queues]);
 
-  const TIME_SLOTS = useMemo(() => 
-    ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'], []
-  );
+  const TIME_SLOTS = useMemo(() => {
+    if (!selectedQueue) return [];
+    return generateTimeSlots('08:00', '16:00', selectedQueue.rawData.record_interval);
+  }, [selectedQueue]);
+
 
   const initialRequests = useMemo(() => [
     { 
@@ -149,37 +389,62 @@ const CatalogPage = () => {
       alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
-    
+
     try {
-      // Здесь можно добавить вызов API для создания записи
+      const meetingDateTime = new Date();
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      meetingDateTime.setHours(hours, minutes, 0, 0);
+
+      const newRecord = await createRecord({
+        queue_id: selectedQueue.id,
+        purpose: visitPurpose,
+        meeting_datetime: meetingDateTime.toISOString(),
+        urgency_level: urgencyLevel || 'low'
+      });
+
       const newAppointment = {
-        id: Date.now(),
-        queueId: selectedQueue.id,
+        id: newRecord.record_id,
+        queueId: newRecord.queue_id,
         queueOwner: selectedQueue.owner,
         time: selectedTime,
-        date: new Date().toLocaleDateString('ru-RU'),
-        purpose: visitPurpose,
-        urgency: urgencyLevel,
+        date: meetingDateTime.toLocaleDateString('ru-RU'),
+        purpose: newRecord.purpose,
+        urgency: newRecord.urgency_level,
         files: files.map(file => file.name)
       };
-      
+
       setAppointments(prev => [...prev, newAppointment]);
-      
+
       setSelectedQueue(null);
       setVisitPurpose('');
       setSelectedTime('');
       setUrgencyLevel('');
       setFiles([]);
-      
+
+      alert('Запись успешно создана!');
+
     } catch (err) {
       console.error('Ошибка при создании записи:', err);
       alert('Не удалось создать запись. Попробуйте еще раз.');
     }
   }, [selectedQueue, selectedTime, visitPurpose, urgencyLevel, files]);
 
-  const handleCancelAppointment = useCallback((id) => {
-    setAppointments(prev => prev.filter(appointment => appointment.id !== id));
-  }, []);
+
+  const handleCancelAppointment = useCallback(async (recordId) => {
+    if (!window.confirm('Вы уверены, что хотите отменить запись?')) {
+      return;
+    }
+
+    try {
+      await deleteRecord(recordId);
+      await fetchMyAppointments();
+      alert('Запись отменена');
+    } catch (err) {
+      console.error('Ошибка при отмене записи:', err);
+      alert('Не удалось отменить запись');
+    }
+  }, [fetchMyAppointments]);
+
 
   const handleSectionChange = useCallback((sectionKey) => {
     setActiveSection(sectionKey);
@@ -227,32 +492,32 @@ const CatalogPage = () => {
   }, []);
 
   const handleCreateQueueSubmit = useCallback(async () => {
-    if (!newQueueName.trim()) {
-      alert('Введите название очереди');
-      return;
-    }
+  if (!newQueueName.trim()) {
+    alert('Введите название очереди');
+    return;
+  }
 
-    setIsSubmitting(true);
-    
-    try {
-      console.log('Создаем очередь:', {
-        name: newQueueName,
-        description: queueDescription,
-        record_interval: recordInterval
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert('Очередь успешно создана!');
-      handleCloseModal();
-            
-    } catch (error) {
-      console.error('Ошибка при создании очереди:', error);
-      alert('Не удалось создать очередь. Попробуйте еще раз.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [newQueueName, queueDescription, recordInterval, handleCloseModal]);
+  setIsSubmitting(true);
+
+  try {
+    const newQueue = await createQueue({
+      name: newQueueName,
+      cleanup_interval: 'P1D',
+      record_interval: `PT${recordInterval}M`
+    });
+
+    alert(`Очередь "${newQueue.name}" успешно создана!`);
+
+    setMyQueues(prev => [...prev, newQueue]);
+
+    handleCloseModal();
+  } catch (error) {
+    console.error('Ошибка при создании очереди:', error);
+    alert('Не удалось создать очередь. Проверьте данные и попробуйте снова.');
+  } finally {
+    setIsSubmitting(false);
+  }
+}, [newQueueName, recordInterval, handleCloseModal]);
 
   const renderUrgencyIcons = () => {
     const icons = [];
@@ -304,145 +569,9 @@ const CatalogPage = () => {
     }
   };
 
-  const AppointmentFormInline = useCallback(() => (
-    <div className="appointment-form-inline">
-      <div className="appointment-form-header">
-        <h2 className="text">Запись на встречу</h2>
-        <button 
-          type="button"
-          className="close-form-btn"
-          onClick={() => setSelectedQueue(null)}
-          aria-label="Закрыть форму"
-        >
-          ×
-        </button>
-      </div>
-      <div className="appointment-body">
-        <div className="queue-owner">{selectedQueue.owner}</div>
-        
-        <div className="form-group">
-          <label className="appointment-text">Укажите цель визита</label>
-          <input 
-            type="text" 
-            className="queue-input" 
-            value={visitPurpose}
-            onChange={(e) => setVisitPurpose(e.target.value)}
-            placeholder="Например: Консультация по проекту"
-            maxLength={100}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label className="appointment-text">Укажите время встречи</label>
-          <div className="time-slots">
-            {TIME_SLOTS.map((time) => (
-              <button
-                key={time}
-                type="button"
-                className={`time-slot-btn ${selectedTime === time ? 'selected' : ''}`}
-                onClick={() => handleTimeSelect(time)}
-              >
-                {time}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        <div className="form-group">
-          <label className="appointment-text">Укажите срочность встречи</label>
-          <div className="urgency-selector">
-            {renderUrgencyIcons()}
-            <div className="urgency-labels">
-              <span className={`urgency-label ${urgencyLevel === 'low' ? 'active' : ''}`}></span>
-              <span className={`urgency-label ${urgencyLevel === 'medium' ? 'active' : ''}`}></span>
-              <span className={`urgency-label ${urgencyLevel === 'high' ? 'active' : ''}`}></span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="form-group">
-          <label className="appointment-text">Файлы</label>
-          <div 
-            className={`file-drop-area ${isDragging ? 'dragging' : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={triggerFileInput}
-          >
-            <div className="file-drop-content">
-              <div className="file-drop-text">
-                <span className="file-drop-main">Перетащите файлы сюда</span>
-                <span className="file-drop-sub">или кликните для выбора файла</span>
-              </div>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileChange}
-              className="file-input-hidden"
-            />
-          </div>
-          
-          {files.length > 0 && (
-            <div className="file-list">
-              {files.map((file, index) => (
-                <div key={index} className="file-item">
-                  <span className="file-name">{file.name}</span>
-                  <span className="file-size">
-                    {file.size > 1024 * 1024 
-                      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-                      : `${(file.size / 1024).toFixed(1)} KB`
-                    }
-                  </span>
-                  <button 
-                    type="button"
-                    className="file-remove-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFile(index);
-                    }}
-                    aria-label="Удалить файл"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <button 
-          type="button"
-          className="submit-appointment-btn"
-          onClick={handleCreateAppointment}
-          disabled={!selectedTime || !visitPurpose.trim()}
-        >
-          Записаться
-        </button>
-      </div>
-    </div>
-  ), [
-    selectedQueue, 
-    visitPurpose, 
-    selectedTime, 
-    urgencyLevel, 
-    files, 
-    isDragging,
-    TIME_SLOTS,
-    handleTimeSelect,
-    handleUrgencySelect,
-    handleCreateAppointment,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-    triggerFileInput,
-    removeFile,
-    renderUrgencyIcons
-  ]);
-
-  const MyAppointmentsBlock = useCallback(() => (
-    <div className="appointment">
+  function MyAppointmentsBlock() {
+    return (
+      <div className="appointment">
       <h2 className="text">Мои записи</h2>
       {appointments.length === 0 ? (
         <div className="no-appointments">Записей нет</div>
@@ -478,10 +607,12 @@ const CatalogPage = () => {
         </div>
       )}
     </div>
-  ), [appointments, handleCancelAppointment, getUrgencyLabel]);
+    )
+  }
 
-  const IncomingRequestsList = useCallback(() => (
-    <div className="incoming-requests">
+  function IncomingRequestsList() {
+    return (
+      <div className="incoming-requests">
       <h2 className="text">Заявки</h2>
       <input
           type="text"
@@ -533,10 +664,20 @@ const CatalogPage = () => {
         </div>
 
         <div className="queue-dropdown">
-          выбор проекта
+          <label htmlFor="queue-select">Выбор проекта:</label>
+          <select
+            id="queue-select"
+            value={selectedFilterQueue || ''}
+            onChange={(e) => handleFilterQueueChange(e.target.value)}
+          >
+            <option value="">-- Все мои очереди --</option>
+            {myQueues.map(queue => (
+              <option key={queue.queue_id} value={queue.queue_id}>
+                {queue.name}
+              </option>
+            ))}
+          </select>
         </div>
-
-      
       {queueRequests.length === 0 ? (
         <div className="no-requests">
           <p>Заявок пока нет</p>
@@ -544,189 +685,175 @@ const CatalogPage = () => {
         </div>
       ) : (
         <div className="requests-list">
-          {queueRequests.map(request => (
-            <button
-              key={request.id}
-              type="button"
-              className={`request-item ${selectedRequest?.id === request.id ? 'selected' : ''}`}
-              onClick={() => setSelectedRequest(request)}
-            >
-              <div className="priority-container">
-                {request.priority === 'high' ? (
-                  <div className="high-priority-group">
-                    <div className="images-row">
-                      <img src={urgencyActiveIcon} alt="ср" />
-                      <img src={urgencyActiveIcon} alt="ср" />
-                      <img src={urgencyActiveIcon} alt="ср" />
-                    </div>
-                  </div>
-                ) : request.priority === 'medium' ? (
-                  <div className="medium-priority-group">
-                    <div className="images-row">
-                      <img src={urgencyActiveIcon} alt="ср" />
-                      <img src={urgencyActiveIcon} alt="ср" />
-                      <img src={urgencyInactiveIcon} alt="ср" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="low-priority-group">
-                    <div className="images-row">
-                      <img src={urgencyActiveIcon} alt="ср" />
-                      <img src={urgencyInactiveIcon} alt="ср" />
-                      <img src={urgencyInactiveIcon} alt="ср" />
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="request-item-time">{request.time}</div>
-              <div className="request-purpose">{request.purpose}</div>
-              {request.files && request.files.length > 0 && (
-                <div className="request-files">
-                  {request.files.length === 1 
-                    ? request.files[0]
-                    : `${request.files[0]} + ${request.files.length - 1}`
-                  }
-                </div>
-              )}
-              <div className="request-user">{request.userName}</div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  ), [queueRequests, selectedRequest]);
-
-  const RequestEditForm = useCallback(() => {
-    const [newTime, setNewTime] = useState(selectedRequest?.time || '');
-    const [newPriority, setNewPriority] = useState(selectedRequest?.priority || 'medium');
-    const [status, setStatus] = useState(selectedRequest?.status || 'ожидает');
-    const [comment, setComment] = useState(selectedRequest?.comment || '');
-
-    const handleSave = useCallback(() => {
-      const updatedRequest = {
-        ...selectedRequest,
-        time: newTime,
-        priority: newPriority,
-        status: status,
-        comment: comment
-      };
-      
-      handleSaveRequest(updatedRequest);
-    }, [selectedRequest, newTime, newPriority, status, comment, handleSaveRequest]);
-
-    const handleDelete = useCallback(() => {
-      handleDeleteRequest(selectedRequest.id);
-    }, [selectedRequest, handleDeleteRequest]);
-
-    if (!selectedRequest) {
+          {selectedFilterQueue && filteredQueueRecords.length > 0 && (
+  <div className="filtered-records">
+    <h3>Записи выбранной очереди</h3>
+    {filteredQueueRecords.map(record => {
+      const date = new Date(record.meeting_datetime);
       return (
-        <div className="request-edit-form empty">
-          <div className="empty-state">
-            <h3>Выберите заявку</h3>
-            <p>Выберите заявку из списка слева для просмотра и редактирования</p>
+        <div key={record.record_id} className="appointment-item">
+          <div className="appointment-content">
+            <div className="app-left">
+              <div className="app-owner">{record.queue_id}</div>
+              <div className="app-purpose">Цель: {record.purpose}</div>
+            </div>
+            <div className="app-right">
+              <div className="app-time">{date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}, {date.toLocaleDateString('ru-RU')}</div>
+              <div className="app-urgency">Срочность: {getUrgencyLabel(record.urgency_level)}</div>
+            </div>
           </div>
         </div>
       );
-    }
+    })}
+  </div>
+)}
 
+        </div>
+      )}
+    {queueRequests.map(request => (
+  <div
+    key={request.id}
+    className={`request-item ${selectedRequest?.id === request.id ? 'selected' : ''}`}
+    onClick={() => setSelectedRequest(request)}
+  >
+    <div className="request-user">{request.userName}</div>
+    <div className="request-purpose">{request.purpose}</div>
+    <div className="request-time">{request.time}</div>
+    {request.files && request.files.length > 0 && (
+      <div className="request-files">{request.files.join(', ')}</div>
+    )}
+  </div>
+))}
+    </div>
+    )
+  }
+
+  function RequestEditForm({ selectedRequest, handleSaveRequest, handleDeleteRequest }) {
+  const [newTime, setNewTime] = useState('');
+  const [newPriority, setNewPriority] = useState('medium');
+  const [status, setStatus] = useState('ожидает');
+  const [comment, setComment] = useState('');
+
+  // Обновляем локальный стейт при смене выбранной заявки
+  useEffect(() => {
+    if (selectedRequest) {
+      setNewTime(selectedRequest.time || '');
+      setNewPriority(selectedRequest.priority || 'medium');
+      setStatus(selectedRequest.status || 'ожидает');
+      setComment(selectedRequest.comment || '');
+    }
+  }, [selectedRequest]);
+
+  const handleSave = () => {
+    if (!selectedRequest) return;
+    handleSaveRequest({
+      ...selectedRequest,
+      time: newTime,
+      priority: newPriority,
+      status,
+      comment
+    });
+  };
+
+  const handleDelete = () => {
+    if (!selectedRequest) return;
+    handleDeleteRequest(selectedRequest.id);
+  };
+
+  if (!selectedRequest) {
     return (
-      <div className="request-edit-form">
-        <div className="form-header">
-          <h3 className="form-title">Заявка</h3>
-          <button 
-            type="button"
-            className="close-form-btn"
-            onClick={() => setSelectedRequest(null)}
-            aria-label="Закрыть форму"
-          >
-            ×
-          </button>
-        </div>
-        
-        <div className="request-details">
-          <div className="detail-value detail-purpose">{selectedRequest.purpose}</div>
-          <div className='double-row'>
-            <div className="priority-container">
-                  {selectedRequest.priority === 'high' ? (
-                    <div className="high-priority-group">
-                      <div className="images-row">
-                        <img src={urgencyActiveIcon} alt="ср" />
-                        <img src={urgencyActiveIcon} alt="ср" />
-                        <img src={urgencyActiveIcon} alt="ср" />
-                      </div>
-                    </div>
-                  ) : selectedRequest.priority === 'medium' ? (
-                    <div className="medium-priority-group">
-                      <div className="images-row">
-                        <img src={urgencyActiveIcon} alt="ср" />
-                        <img src={urgencyActiveIcon} alt="ср" />
-                        <img src={urgencyInactiveIcon} alt="ср" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="low-priority-group">
-                      <div className="images-row">
-                        <img src={urgencyActiveIcon} alt="ср" />
-                        <img src={urgencyInactiveIcon} alt="ср" />
-                        <img src={urgencyInactiveIcon} alt="ср" />
-                      </div>
-                    </div>
-                  )}
-            </div>
-            <div className="detail-value time-value">{selectedRequest.time}</div>
-          </div>
-          {selectedRequest.files && selectedRequest.files.length > 0 && (
-            <div className="detail-value file-list">
-              {selectedRequest.files.map((file, index) => (
-                <div key={index} className="file-item">
-                  <span className="file-name">{file}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="detail-value user-name">{selectedRequest.userName}</div>
-        </div>
-        
-        <div className="edit-form"> 
-          <div className="form-actions">
-            <button 
-              type="button"
-              className="save-btn"
-              onClick={handleSave}
-            >
-              Согласовать
-            </button>
-            <button 
-              type="button"
-              className="delete-btn"
-              onClick={handleDelete}
-            >
-              Отклонить
-            </button>
-            <button 
-              type="button"
-              className="change-btn"
-            >
-              Перенос времени
-            </button>
-            <button 
-              type="button"
-              className="change-btn"
-            >
-              Изменить приоритет
-            </button>
-          </div>
+      <div className="request-edit-form empty">
+        <div className="empty-state">
+          <h3>Выберите заявку</h3>
+          <p>Выберите заявку из списка слева для просмотра и редактирования</p>
         </div>
       </div>
     );
-  }, [selectedRequest, TIME_SLOTS, handleSaveRequest, handleDeleteRequest, getPriorityLabel]);
+  }
 
-  const MyQueueManager = useCallback(() => (
-    <div className="my-queue-manager">
-      <IncomingRequestsList />
-      <RequestEditForm />
+  return (
+    <div className="request-edit-form">
+      <div className="form-header">
+        <h3 className="form-title">Заявка</h3>
+        <button 
+          type="button"
+          className="close-form-btn"
+          onClick={() => handleDeleteRequest(null)}
+          aria-label="Закрыть форму"
+        >
+          ×
+        </button>
+      </div>
+      {/* Здесь оставляем твой HTML для деталей заявки */}
+      <div className="request-details">
+        <div className="detail-value detail-purpose">{selectedRequest.purpose}</div>
+        <div className='double-row'>
+          <div className="priority-container">
+            {selectedRequest.priority === 'high' ? (
+              <div className="high-priority-group">
+                <div className="images-row">
+                  <img src={urgencyActiveIcon} alt="ср" />
+                  <img src={urgencyActiveIcon} alt="ср" />
+                  <img src={urgencyActiveIcon} alt="ср" />
+                </div>
+              </div>
+            ) : selectedRequest.priority === 'medium' ? (
+              <div className="medium-priority-group">
+                <div className="images-row">
+                  <img src={urgencyActiveIcon} alt="ср" />
+                  <img src={urgencyActiveIcon} alt="ср" />
+                  <img src={urgencyInactiveIcon} alt="ср" />
+                </div>
+              </div>
+            ) : (
+              <div className="low-priority-group">
+                <div className="images-row">
+                  <img src={urgencyActiveIcon} alt="ср" />
+                  <img src={urgencyInactiveIcon} alt="ср" />
+                  <img src={urgencyInactiveIcon} alt="ср" />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="detail-value time-value">{selectedRequest.time}</div>
+        </div>
+        {selectedRequest.files && selectedRequest.files.length > 0 && (
+          <div className="detail-value file-list">
+            {selectedRequest.files.map((file, index) => (
+              <div key={index} className="file-item">{file}</div>
+            ))}
+          </div>
+        )}
+        <div className="detail-value user-name">{selectedRequest.userName}</div>
+      </div>
+
+      <div className="edit-form"> 
+        <div className="form-actions">
+          <button type="button" className="save-btn" onClick={handleSave}>Согласовать</button>
+          <button type="button" className="delete-btn" onClick={handleDelete}>Отклонить</button>
+          <button type="button" className="change-btn">Перенос времени</button>
+          <button type="button" className="change-btn">Изменить приоритет</button>
+        </div>
+      </div>
     </div>
-  ), [IncomingRequestsList, RequestEditForm]);
+  );
+}
+
+
+  function MyQueueManager({ selectedRequest, setSelectedRequest, handleSaveRequest, handleDeleteRequest }) {
+  return (
+    <div className="my-queue-manager">
+      <IncomingRequestsList setSelectedRequest={setSelectedRequest} />
+      <RequestEditForm 
+        selectedRequest={selectedRequest} 
+        handleSaveRequest={handleSaveRequest} 
+        handleDeleteRequest={handleDeleteRequest} 
+      />
+    </div>
+  );
+}
+
+
 
   const QueuesListContent = useCallback(() => {
     if (loadingQueues) {
@@ -794,7 +921,32 @@ const CatalogPage = () => {
               <QueuesListContent />
             </div>
             
-            {selectedQueue ? <AppointmentFormInline /> : <MyAppointmentsBlock />}
+            {selectedQueue ? (
+                              <AppointmentFormInline
+                                selectedQueue={selectedQueue}
+                                visitPurpose={visitPurpose}
+                                setVisitPurpose={setVisitPurpose}
+                                selectedTime={selectedTime}
+                                TIME_SLOTS={TIME_SLOTS}
+                                handleTimeSelect={handleTimeSelect}
+                                urgencyLevel={urgencyLevel}
+                                renderUrgencyIcons={renderUrgencyIcons}
+                                isDragging={isDragging}
+                                handleDragOver={handleDragOver}
+                                handleDragLeave={handleDragLeave}
+                                handleDrop={handleDrop}
+                                triggerFileInput={triggerFileInput}
+                                fileInputRef={fileInputRef}
+                                handleFileChange={handleFileChange}
+                                files={files}
+                                removeFile={removeFile}
+                                handleCreateAppointment={handleCreateAppointment}
+                                setSelectedQueue={setSelectedQueue}
+                              />
+                            ) : (
+                              <MyAppointmentsBlock />
+                            )}
+
           </div>
         </div>
       )

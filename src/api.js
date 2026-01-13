@@ -95,3 +95,60 @@ export const getCurrentUser = async () => {
 export const getQueues = async () => {
   return authFetch(`${BASE_URL}/queues/`);
 };
+
+
+export const createRecord = async ({ queue_id, purpose, meeting_datetime, urgency_level }) => {
+  return authFetch(`${BASE_URL}/records/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      queue_id,
+      purpose,
+      meeting_datetime,
+      urgency_level,
+    }),
+  });
+};
+
+export const updateUser = async (user_uuid, data) => {
+  return authFetch(`${BASE_URL}/users/${user_uuid}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+};
+
+export const getMyRecords = async () => {
+  return authFetch(`${BASE_URL}/records/me`);
+};
+
+
+export const deleteRecord = async (record_id) => {
+  return authFetch(`${BASE_URL}/records/${record_id}`, {
+    method: "DELETE",
+  });
+};
+
+export const getRecordsByQueue = async (queue_id) => {
+  if (!queue_id) throw new Error("queue_id is required");
+  return authFetch(`${BASE_URL}/records/queue/${queue_id}`);
+};
+
+export const getMyQueues = async () => {
+  return authFetch(`${BASE_URL}/queues/owner/me`);
+};
+
+export const createQueue = async ({ name, cleanup_interval = 'P1D', record_interval = 'PT30M' }) => {
+  if (!name || name.trim() === '') {
+    throw new Error("Name is required");
+  }
+
+  return authFetch(`${BASE_URL}/queues/`, {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      cleanup_interval,
+      record_interval
+    })
+  });
+};
